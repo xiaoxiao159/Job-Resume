@@ -1,0 +1,148 @@
+/* 设计系统 tokens —— 单一来源：03-ui-ux-design §2（勿在此改值，改设计请升版 03） */
+@import "tailwindcss";
+
+@theme {
+  /* §2.2 色彩 */
+  --color-primary: #0369a1;
+  --color-primary-hover: #0284c7;
+  --color-primary-soft: #e0f2fe;
+  --color-secondary: #0ea5e9;
+  --color-accent: #16a34a;
+  --color-accent-soft: #dcfce7;
+  --color-warning: #d97706;
+  --color-warning-soft: #fef3c7;
+  --color-destructive: #dc2626;
+  --color-destructive-soft: #fee2e2;
+  --color-background: #f8fafc;
+  --color-card: #ffffff;
+  --color-foreground: #0f172a;
+  --color-muted: #f1f5f9;
+  --color-muted-foreground: #64748b;
+  --color-border: #e2e8f0;
+  --color-ring: #0369a1;
+
+  /* §2.4 字体 */
+  --font-display: "Poppins", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-body: "Open Sans", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "PingFang SC", sans-serif;
+
+  /* §2.6 浮层阴影（卡片无阴影，仅 Modal/Drawer/Dropdown 用） */
+  --shadow-pop: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+@layer base {
+  html {
+    @apply font-body;
+  }
+  body {
+    @apply bg-background text-foreground text-sm antialiased;
+  }
+  /* 表单占位符不替代 label（03 §4.4） */
+  ::placeholder {
+    @apply text-muted-foreground opacity-70;
+  }
+}
+
+/* AI / 简历 Markdown 渲染样式（MDPreview 容器 .prose-azi；模板 HTML 预览走内联 CSS 不受影响） */
+.prose-azi {
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+.prose-azi > *:first-child {
+  margin-top: 0;
+}
+.prose-azi > *:last-child {
+  margin-bottom: 0;
+}
+.prose-azi h1,
+.prose-azi h2,
+.prose-azi h3,
+.prose-azi h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: 1em 0 0.35em;
+}
+.prose-azi h1 { font-size: 1.25rem; }
+.prose-azi h2 { font-size: 1.125rem; }
+.prose-azi h3 { font-size: 1rem; }
+.prose-azi h4 { font-size: 0.875rem; }
+.prose-azi p { margin: 0.4em 0; }
+.prose-azi ul,
+.prose-azi ol {
+  padding-left: 1.4em;
+  margin: 0.4em 0;
+}
+.prose-azi ul { list-style: disc; }
+.prose-azi ol { list-style: decimal; }
+.prose-azi li { margin: 0.15em 0; }
+.prose-azi strong { font-weight: 600; }
+.prose-azi a { color: var(--color-primary); }
+.prose-azi a:hover { text-decoration: underline; }
+.prose-azi code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--color-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+.prose-azi pre {
+  background: var(--color-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.75em 1em;
+  overflow-x: auto;
+  margin: 0.6em 0;
+}
+.prose-azi pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+.prose-azi blockquote {
+  border-left: 3px solid var(--color-border);
+  padding-left: 0.8em;
+  color: var(--color-muted-foreground);
+  margin: 0.6em 0;
+}
+.prose-azi table {
+  border-collapse: collapse;
+  margin: 0.6em 0;
+  width: 100%;
+}
+.prose-azi th,
+.prose-azi td {
+  border: 1px solid var(--color-border);
+  padding: 0.35em 0.6em;
+  text-align: left;
+}
+.prose-azi th {
+  background: var(--color-muted);
+  font-weight: 600;
+}
+.prose-azi hr {
+  border-color: var(--color-border);
+  margin: 0.8em 0;
+}
+
+@layer utilities {
+  /* 浮层统一入口 */
+  .pop-layer {
+    @apply bg-card shadow-pop;
+  }
+  /* AI 流式末尾光标（03 §2.8；reduced-motion 下隐藏） */
+  .stream-caret::after {
+    content: "▍";
+    @apply text-primary;
+    animation: caret-pulse 1s ease-in-out infinite;
+  }
+  @keyframes caret-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .stream-caret::after {
+      animation: none;
+    }
+  }
+}

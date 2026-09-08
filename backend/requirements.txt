@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+pydantic-settings
+sqlalchemy
+psycopg2-binary
+openai      # OpenAI 兼容 SDK（DeepSeek / SiliconFlow 直连）
+httpx2      # openai 3.x 的传输层依赖（encode 重写版），llm_client 直接 import 以构造 Timeout
+jinja2      # prompts/ 与 templates/ 渲染
+playwright  # resume export pdf（07 §9；装后需 `playwright install chromium`，
+            #   或设 PDF_BROWSER_CHANNEL=msedge 用系统 Edge 兜底）

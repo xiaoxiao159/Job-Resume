@@ -1,0 +1,78 @@
+{# ---- 8 段快照 → Markdown（镜像前端 buildResumeMarkdown；含 azi-loc 定位锚点）---- #}
+# {{ c.basic_info.name }}
+
+{{ [c.basic_info.phone, c.basic_info.email, c.basic_info.github] | select | join(" · ") }}
+
+**求职意向**：{{ c.job_intention.role }} · {{ c.job_intention.city }} · {{ availability_label(c.job_intention.availability) }}
+
+{% if c.education %}
+## 教育背景
+
+{% for e in c.education %}
+- **{{ e.school | esc }}** · {{ e.major | esc }} · {{ degree_label(e.degree) }}（{{ e.period | esc }}）
+{%- if e.courses %}
+  - 主修课程：{{ e.courses | esc }}
+{%- endif %}
+{% endfor %}
+
+{% endif %}
+{% if c.projects %}
+## 项目经历
+
+{% for p in c.projects %}
+{% set pi = loop.index0 %}
+### {{ p.name | esc }}{% if p.role %} · {{ p.role | esc }}{% endif %}（{{ p.period | esc }}）
+
+{% if p.tech_stack %}*技术栈：{{ p.tech_stack | map("esc") | join(" / ") }}*{% endif %}
+
+{% for b in p.bullets %}
+- {{ b | esc }}
+<!--azi-loc:projects[{{ pi }}].bullets[{{ loop.index0 }}]-->
+
+{% endfor %}
+{% if p.github or p.demo %}
+链接：{{ [p.github and "GitHub（" ~ (p.github | esc) ~ "）", p.demo and "Demo（" ~ (p.demo | esc) ~ "）"] | select | join(" · ") }}
+
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if c.research %}
+## 科研经历
+
+{% for e in c.research %}
+- **{{ e.name | esc }}** · {{ e.role | esc }}（{{ e.period | esc }}）
+{%- if e.description %}
+  - {{ e.description | esc }}
+{%- endif %}
+{% endfor %}
+
+{% endif %}
+{% if c.campus %}
+## 校园经历
+
+{% for e in c.campus %}
+- **{{ e.name | esc }}** · {{ e.role | esc }}（{{ e.period | esc }}）
+{%- if e.description %}
+  - {{ e.description | esc }}
+{%- endif %}
+{% endfor %}
+
+{% endif %}
+{% if c.honors %}
+## 荣誉奖项
+
+{% for h in c.honors %}
+- {{ h.name | esc }}（{{ h.time | esc }}）
+{% endfor %}
+
+{% endif %}
+{% if c.skills %}
+## 专业技能
+
+{{ c.skills | map("skill_line") | join("、") }}
+{% endif %}
+{% if c.self_evaluation %}
+## 自我评价
+
+{{ c.self_evaluation | esc }}
+{% endif %}

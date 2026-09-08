@@ -1,0 +1,66 @@
+{# ---- 简历正文（三套模板共用；镜像前端 buildResumeHtml 的 section 结构）---- #}
+<header class="hdr">
+  <h1>{{ c.basic_info.name }}</h1>
+  <p>{{ c.job_intention.role }} · {{ c.job_intention.city }} · {{ availability_label(c.job_intention.availability) }}</p>
+  <p class="contact">{{ [c.basic_info.phone, c.basic_info.email, c.basic_info.github] | select | join(" | ") }}</p>
+</header>
+
+{% if c.education %}
+<section>
+  <h2>教育背景</h2>
+  {% for e in c.education %}
+  <p><b>{{ e.school }}</b> · {{ e.major }} · {{ degree_label(e.degree) }} · {{ e.period }}{% if e.courses %}<br>主修课程：{{ e.courses }}{% endif %}</p>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if c.projects %}
+<section>
+  <h2>项目经历</h2>
+  {% for p in c.projects %}
+  <article>
+    <h3>{{ p.name }} · {{ p.period }}</h3>
+    {% if p.tech_stack %}<p class="stack">{{ p.tech_stack | join(" · ") }}</p>{% endif %}
+    <ul>
+      {% for b in p.bullets %}<li>{{ b }}</li>{% endfor %}
+    </ul>
+  </article>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% macro exp_section(title, rows) %}
+{% if rows %}
+<section>
+  <h2>{{ title }}</h2>
+  {% for e in rows %}
+  <p><b>{{ e.name }}</b> · {{ e.role }} · {{ e.period }}{% if e.description %}<br>{{ e.description }}{% endif %}</p>
+  {% endfor %}
+</section>
+{% endif %}
+{% endmacro %}
+{{ exp_section("科研经历", c.research) }}
+{{ exp_section("校园经历", c.campus) }}
+
+{% if c.honors %}
+<section>
+  <h2>荣誉奖项</h2>
+  <ul>
+    {% for h in c.honors %}<li>{{ h.name }}（{{ h.time }}）</li>{% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if c.skills %}
+<section>
+  <h2>专业技能</h2>
+  <p>{{ c.skills | map("skill_line") | join("、") }}</p>
+</section>
+{% endif %}
+
+{% if c.self_evaluation %}
+<section>
+  <h2>自我评价</h2>
+  <p>{{ c.self_evaluation | nl2br }}</p>
+</section>
+{% endif %}

@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Job Copilot · 数据模型 ER 图（02-data-model v0.2）</title>
+<style>
+  /* ---------- 明暗双模式（OS 偏好 / data-theme 覆盖） ---------- */
+  :root {
+    color-scheme: light;
+    --page:      #f9f9f7;
+    --surface:   #fcfcfb;
+    --ink:       #0b0b0b;
+    --ink-2:     #52514e;
+    --muted:     #898781;
+    --grid:      #e1e0d9;
+    --edge:      #898781;
+    --edge-hl:   #2a78d6;
+    --border:    rgba(11,11,11,0.10);
+    --mod-core:  #64748b;   /* 横切（users / agent_runs，中性基础设施色） */
+    --mod-1: #2a78d6;  /* M1 Career Assets  blue   */
+    --mod-2: #eb6834;  /* M2 JD Analysis     orange */
+    --mod-3: #1baf7a;  /* M3 Project Agent   aqua   */
+    --mod-4: #eda100;  /* M4/M5 Resume       yellow */
+    --mod-6: #e87ba4;  /* M6 HR Agent        magenta*/
+    --mod-7: #008300;  /* M7 Application Log green  */
+    --mod-8: #4a3aa7;  /* M8 Interview QA    violet */
+    --pk-bg:   rgba(237,161,0,0.18);
+    --pk-fg:   #7a5400;
+    --fk-bg:   rgba(42,120,214,0.14);
+    --fk-fg:   #1c5cab;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page:      #0d0d0d;
+      --surface:   #1a1a19;
+      --ink:       #ffffff;
+      --ink-2:     #c3c2b7;
+      --muted:     #898781;
+      --grid:      #2c2c2a;
+      --edge:      #8b8a84;
+      --edge-hl:   #3987e5;
+      --border:    rgba(255,255,255,0.10);
+      --mod-core:  #94a3b8;
+      --mod-1: #3987e5;
+      --mod-2: #d95926;
+      --mod-3: #199e70;
+      --mod-4: #c98500;
+      --mod-6: #d55181;
+      --mod-7: #008300;
+      --mod-8: #9085e9;
+      --pk-bg:   rgba(237,161,0,0.22);
+      --pk-fg:   #ffd166;
+      --fk-bg:   rgba(57,135,229,0.22);
+      --fk-fg:   #86b6ef;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:      #0d0d0d;
+    --surface:   #1a1a19;
+    --ink:       #ffffff;
+    --ink-2:     #c3c2b7;
+    --muted:     #898781;
+    --grid:      #2c2c2a;
+    --edge:      #8b8a84;
+    --edge-hl:   #3987e5;
+    --border:    rgba(255,255,255,0.10);
+    --mod-core:  #94a3b8;
+    --mod-1: #3987e5;
+    --mod-2: #d95926;
+    --mod-3: #199e70;
+    --mod-4: #c98500;
+    --mod-6: #d55181;
+    --mod-7: #008300;
+    --mod-8: #9085e9;
+    --pk-bg:   rgba(237,161,0,0.22);
+    --pk-fg:   #ffd166;
+    --fk-bg:   rgba(57,135,229,0.22);
+    --fk-fg:   #86b6ef;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .mono { font-family: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace; }
+
+  /* ---------- 页头 ---------- */
+  .page-head { max-width: 1560px; margin: 0 auto; padding: 28px 24px 8px; }
+  .page-head h1 { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+  .page-head .meta { color: var(--ink-2); font-size: 13px; margin: 0; }
+  .page-head .meta .mono { font-size: 12.5px; }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
+    margin-top: 14px; padding: 10px 14px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    font-size: 12.5px; color: var(--ink-2);
+  }
+  .legend .lg { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .badge-pk, .badge-fk {
+    display: inline-block; font-size: 10px; font-weight: 600; line-height: 1;
+    padding: 2px 4px; border-radius: 4px;
+  }
+  .badge-pk { background: var(--pk-bg); color: var(--pk-fg); }
+  .badge-fk { background: var(--fk-bg); color: var(--fk-fg); }
+  .lg-arrow { color: var(--muted); font-size: 11px; }
+
+  /* ---------- ER 画布 ---------- */
+  .er-wrap { max-width: 1560px; margin: 10px auto 0; padding: 0 24px; }
+  .er-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+  .er-canvas { position: relative; width: 1490px; height: 960px; margin: 0 auto; }
+  #erSvg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .edge path.line { fill: none; stroke: var(--edge); stroke-width: 1.4; }
+  .edge path.line.nu { stroke-dasharray: 6 4; }
+  .edge path.foot { fill: none; stroke: var(--edge); stroke-width: 1.4; stroke-linecap: round; }
+  .edge circle.one { fill: var(--surface); stroke: var(--edge); stroke-width: 1.4; }
+  .edge.hl path.line, .edge.hl path.foot { stroke: var(--edge-hl); stroke-width: 2.2; }
+  .edge.hl circle.one { stroke: var(--edge-hl); stroke-width: 2.2; }
+
+  .node {
+    position: absolute; width: 190px; z-index: 1;
+    background: var(--surface);
+    border: 1px solid var(--border); border-radius: 9px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    cursor: pointer; user-select: none;
+  }
+  .node:focus-visible { outline: 2px solid var(--edge-hl); outline-offset: 2px; }
+  .node .n-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    padding: 7px 10px 7px 13px; border-radius: 8px 8px 0 0;
+    border-left: 4px solid var(--nc, var(--muted));
+    background: var(--nbg, transparent);
+    border-bottom: 1px solid var(--border);
+  }
+  .node .n-head .t { font-size: 11.5px; font-weight: 700; letter-spacing: .2px; overflow: hidden; text-overflow: ellipsis; }
+  .node .n-head .m { font-size: 10px; color: var(--ink-2); white-space: nowrap; }
+  .node .n-rows { padding: 2px 0; }
+  .node .n-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4.5px 10px 4.5px 13px; font-size: 12px;
+    border-top: 1px solid var(--grid);
+  }
+  .node .n-row:first-child { border-top: none; }
+  .node .n-row .f { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .node .n-row .ref { color: var(--muted); font-size: 10.5px; white-space: nowrap; }
+  .node.hover, .node:focus-visible { box-shadow: 0 0 0 2px var(--nc, var(--edge-hl)); }
+
+  /* ---------- 实体明细卡片 ---------- */
+  .cards { max-width: 1560px; margin: 26px auto 0; padding: 0 24px; }
+  .cards h2 { font-size: 17px; margin: 0 0 12px; }
+  .cards h2 span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(440px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    scroll-margin-top: 16px;
+  }
+  .card .c-head {
+    padding: 10px 14px; border-radius: 9px 9px 0 0;
+    border-left: 4px solid var(--nc, var(--muted));
+    background: var(--nbg, transparent);
+    border-bottom: 1px solid var(--border);
+  }
+  .card .c-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .card .c-title .t { font-weight: 700; font-size: 13.5px; letter-spacing: .2px; }
+  .card .c-title .zh { color: var(--ink-2); font-size: 13px; }
+  .chip {
+    font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 999px;
+    color: var(--nc, var(--ink-2));
+    background: color-mix(in srgb, var(--nc, var(--muted)) 14%, var(--surface));
+  }
+  .card .c-note { color: var(--muted); font-size: 12px; margin-top: 3px; }
+  .card table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .card td {
+    padding: 4.5px 14px; font-size: 12.5px; border-top: 1px solid var(--grid);
+    vertical-align: top;
+  }
+  .card tr:first-child td { border-top: none; }
+  .card td.fname { width: 150px; white-space: nowrap; }
+  .card td.fname .f { font-weight: 600; }
+  .card td.fname .ref { color: var(--muted); font-size: 10.5px; }
+  .card td.ftype { width: 118px; color: var(--muted); }
+  .card td.ftype .en { display: block; font-size: 10.5px; color: var(--muted); opacity: .85; margin-top: 1px; }
+  .card td.fex {
+    color: var(--ink-2);
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 0;  /* 配合表格布局截断 */
+  }
+  .card .c-foot {
+    padding: 7px 14px; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 11.5px;
+  }
+  .card .c-foot .mono { font-size: 11px; }
+
+  footer { max-width: 1560px; margin: 22px auto 40px; padding: 0 24px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>AI Job Copilot · 数据模型 ER 图</h1>
+  <p class="meta">
+    19 张表 · 24 条关联 · 依据 <span class="mono">design/02-data-model.md</span> v0.2（2026-09-04）·
+    PostgreSQL · 节点仅保留主键 / 外键，点击节点跳转下方字段明细
+  </p>
+  <div class="legend">
+    <span class="lg"><span class="dot" style="background:var(--mod-1)"></span>M1 资产</span>
+    <span class="lg"><span class="dot" style="background:var(--mod-2)"></span>M2 JD</span>
+    <span class="lg"><span class="dot" style="background:var(--mod-3)"></span>M3 表达</span>
+    <span class="lg"><span class="dot" style="background:var(--mod-4)"></span>M4/M5 简历</span>
+    <span class="lg"><span class="dot" style="background:var(--mod-6)"></span>M6 HR</span>
+    <span class="lg"><span class="dot" style="background:var(--mod-7)"></span>M7 投递</span>
+    <span class="lg"><span class="dot" style="background:var(--mod-8)"></span>M8 面试</span>
+    <span class="lg"><span class="dot" style="background:var(--mod-core)"></span>横切</span>
+    <span class="lg" style="border-left:1px solid var(--border); padding-left:18px;"><span class="badge-pk">PK</span>主键</span>
+    <span class="lg"><span class="badge-fk">FK</span>外键</span>
+    <span class="lg"><svg width="46" height="14" viewBox="0 0 46 14"><line x1="0" y1="7" x2="46" y2="7" stroke="var(--edge)" stroke-width="1.4"/><circle cx="44" cy="7" r="3.4" fill="var(--surface)" stroke="var(--edge)"/><path d="M2 7 L8 3.2 M2 7 L8 10.8" stroke="var(--edge)" stroke-width="1.4" fill="none"/></svg>圆点=一(1) · 鸦爪=多(N)</span>
+    <span class="lg"><svg width="34" height="10" viewBox="0 0 34 10"><line x1="0" y1="5" x2="34" y2="5" stroke="var(--edge)" stroke-width="1.4" stroke-dasharray="6 4"/></svg>可空外键</span>
+  </div>
+</header>
+
+<section class="er-wrap">
+  <div class="er-scroll">
+    <div class="er-canvas" id="erCanvas">
+      <svg id="erSvg"></svg>
+      <!-- 节点由 JS 注入 -->
+    </div>
+  </div>
+</section>
+
+<section class="cards">
+  <h2>实体明细 · 全部字段与示例<span>示例内容为演示数据，字段定义以 02-data-model.md 为准</span></h2>
+  <div class="card-grid" id="cardGrid"></div>
+</section>
+
+<footer>
+  AI Job Copilot · 设计文档系列：<span class="mono">design/PRD.md</span> →
+  <span class="mono">design/01-feature-design.md</span> → <span class="mono">design/02-data-model.md</span> → 本图
+</footer>
+
+<script>
+/* ============ 模块定义 ============ */
+const MOD = {
+  core: { name: '横切',       c: 'var(--mod-core)' },
+  m1:   { name: 'M1 资产',    c: 'var(--mod-1)' },
+  m2:   { name: 'M2 JD',      c: 'var(--mod-2)' },
+  m3:   { name: 'M3 表达',    c: 'var(--mod-3)' },
+  m4:   { name: 'M4/M5 简历', c: 'var(--mod-4)' },
+  m6:   { name: 'M6 HR',      c: 'var(--mod-6)' },
+  m7:   { name: 'M7 投递',    c: 'var(--mod-7)' },
+  m8:   { name: 'M8 面试',    c: 'var(--mod-8)' },
+};
+
+/* 布局：每个实体节点在 1490×960 画布上的位置（x, y） */
+const POS = {
+  users:               [30,  30],
+  basic_info:          [30, 150],
+  educations:          [30, 310],
+  experiences:         [30, 470],
+  honors:              [30, 630],
+  skills:              [30, 790],
+  projects:            [330,  30],
+  project_skills:      [330, 320],
+  evidence:            [330, 480],
+  project_expressions: [330, 640],
+  job_descriptions:    [660,  30],
+  jd_analyses:         [660, 230],
+  jd_matches:          [660, 430],
+  resumes:             [970,  30],
+  resume_versions:     [970, 230],
+  applications:        [1270, 30],
+  interview_qa:        [1270, 240],
+  hr_messages:         [1270, 460],
+  agent_runs:          [1270, 700],
+};
+
+const NODE_W = 190, HEAD_H = 44, ROW_H = 28, PAD_B = 8;
+
+/* ============ 实体定义（字段顺序即文档顺序） ============ */
+/* n:字段名 t:类型 ex:示例 pk:主键 fk:外键引用表 nu:可空 un:唯一 en:枚举值 con:附加约束 */
+const ENTITIES = [
+  {
+    table: 'users', zh: '用户', mod: 'core',
+    note: '单用户模式：无登录、固定默认用户，预留多用户演进',
+    idx: 'UNIQUE(email)',
+    fields: [
+      { n: 'id',         t: 'UUID',        pk: true, ex: 'u_0001' },
+      { n: 'email',      t: 'TEXT',        ex: 'zhangsan@example.com', con: 'UNIQUE' },
+      { n: 'created_at', t: 'TIMESTAMPTZ', ex: '2026-08-01 10:00:00+08' },
+      { n: 'updated_at', t: 'TIMESTAMPTZ', ex: '2026-09-04 21:30:00+08' },
+    ],
+  },
+  {
+    table: 'basic_info', zh: '基本信息', mod: 'm1',
+    note: '基本信息与求职意向（1:1 用户），含自我评价',
+    idx: 'UNIQUE(user_id)',
+    fields: [
+      { n: 'id',             t: 'UUID',        pk: true, ex: 'bi_0001' },
+      { n: 'user_id',        t: 'UUID',        fk: 'users', un: true, ex: 'u_0001' },
+      { n: 'name',           t: 'TEXT',        ex: '张三' },
+      { n: 'email',          t: 'TEXT',        ex: 'zhangsan@example.com' },
+      { n: 'phone',          t: 'TEXT',        ex: '138****5678' },
+      { n: 'github_url',     t: 'TEXT',        ex: 'https://github.com/zhangsan' },
+      { n: 'homepage_url',   t: 'TEXT',        nu: true, ex: 'https://zhangsan.dev' },
+      { n: 'job_role',       t: 'TEXT',        nu: true, ex: 'AI 应用工程师' },
+      { n: 'city',           t: 'TEXT',        nu: true, ex: '上海' },
+      { n: 'availability',   t: 'availability', nu: true, en: 'immediate / within_1_week / within_2_weeks / within_1_month / undecided', ex: 'within_1_week（一周内）' },
+      { n: 'self_evaluation', t: 'TEXT',       nu: true, ex: '3 年 AI 应用开发经验，主导过多个 RAG / Agent 项目落地……' },
+      { n: 'created_at',     t: 'TIMESTAMPTZ', ex: '2026-08-01 10:00:00+08' },
+      { n: 'updated_at',     t: 'TIMESTAMPTZ', ex: '2026-09-04 21:30:00+08' },
+    ],
+  },
+  {
+    table: 'educations', zh: '教育背景', mod: 'm1',
+    note: '必填，支持多条（如本科 + 硕士）',
+    idx: '(user_id, sort_order)',
+    fields: [
+      { n: 'id',         t: 'UUID',   pk: true, ex: 'edu_0001' },
+      { n: 'user_id',    t: 'UUID',   fk: 'users', ex: 'u_0001' },
+      { n: 'school',     t: 'TEXT',   ex: '上海交通大学' },
+      { n: 'major',      t: 'TEXT',   ex: '计算机科学与技术' },
+      { n: 'degree',     t: 'degree', en: 'bachelor / master / phd', ex: 'master（硕士）' },
+      { n: 'start_date', t: 'DATE',   nu: true, ex: '2023-09-01' },
+      { n: 'end_date',   t: 'DATE',   nu: true, ex: '2026-06-30' },
+      { n: 'courses',    t: 'TEXT',   nu: true, ex: '机器学习、自然语言处理、分布式系统' },
+      { n: 'sort_order', t: 'INT',    ex: '0' },
+      { n: 'created_at', t: 'TIMESTAMPTZ', ex: '2026-08-01 10:05:00+08' },
+      { n: 'updated_at', t: 'TIMESTAMPTZ', ex: '2026-08-01 10:05:00+08' },
+    ],
+  },
+  {
+    table: 'experiences', zh: '科研 / 校园经历', mod: 'm1',
+    note: '可选；科研与校园合并一张表（type 区分）',
+    idx: '(user_id, sort_order)',
+    fields: [
+      { n: 'id',          t: 'UUID',  pk: true, ex: 'exp_0001' },
+      { n: 'user_id',     t: 'UUID',  fk: 'users', ex: 'u_0001' },
+      { n: 'type',        t: 'experience_type', en: 'research / campus', ex: 'research（科研）' },
+      { n: 'name',        t: 'TEXT',  ex: '基于 RAG 的代码评审辅助研究' },
+      { n: 'role',        t: 'TEXT',  nu: true, ex: '研究助理' },
+      { n: 'start_date',  t: 'DATE',  nu: true, ex: '2024-09-01' },
+      { n: 'end_date',    t: 'DATE',  nu: true, ex: '2025-06-30' },
+      { n: 'description', t: 'TEXT',  nu: true, ex: '负责检索模块的构建与评测……' },
+      { n: 'sort_order',  t: 'INT',   ex: '0' },
+      { n: 'created_at',  t: 'TIMESTAMPTZ', ex: '2026-08-01 10:10:00+08' },
+      { n: 'updated_at',  t: 'TIMESTAMPTZ', ex: '2026-08-01 10:10:00+08' },
+    ],
+  },
+  {
+    table: 'honors', zh: '荣誉证书', mod: 'm1',
+    note: '可选；证书 / 荣誉名称 + 自由时间串',
+    idx: '(user_id, sort_order)',
+    fields: [
+      { n: 'id',         t: 'UUID',  pk: true, ex: 'hon_0001' },
+      { n: 'user_id',    t: 'UUID',  fk: 'users', ex: 'u_0001' },
+      { n: 'name',       t: 'TEXT',  ex: '国家奖学金' },
+      { n: 'time',       t: 'TEXT',  nu: true, ex: '2025 年' },
+      { n: 'sort_order', t: 'INT',   ex: '0' },
+      { n: 'created_at', t: 'TIMESTAMPTZ', ex: '2026-08-01 10:12:00+08' },
+      { n: 'updated_at', t: 'TIMESTAMPTZ', ex: '2026-08-01 10:12:00+08' },
+    ],
+  },
+  {
+    table: 'skills', zh: '技能', mod: 'm1',
+    note: '技能名称 + 熟练程度，供 JD Match 做技能匹配',
+    idx: 'UNIQUE(user_id, name)',
+    fields: [
+      { n: 'id',          t: 'UUID',  pk: true, ex: 's_0001' },
+      { n: 'user_id',     t: 'UUID',  fk: 'users', ex: 'u_0001' },
+      { n: 'name',        t: 'TEXT',  ex: 'LangGraph' },
+      { n: 'proficiency', t: 'proficiency', en: 'beginner / familiar / proficient / expert', ex: 'expert（精通）' },
+      { n: 'sort_order',  t: 'INT',   ex: '0' },
+      { n: 'created_at',  t: 'TIMESTAMPTZ', ex: '2026-08-01 10:15:00+08' },
+      { n: 'updated_at',  t: 'TIMESTAMPTZ', ex: '2026-08-01 10:15:00+08' },
+    ],
+  },
+  {
+    table: 'projects', zh: '项目资产', mod: 'm1',
+    note: '系统核心数据源；字段即「通用版表达」载体（AI 辅助填写回填于此）',
+    idx: '(user_id, sort_order)',
+    fields: [
+      { n: 'id',              t: 'UUID',   pk: true, ex: 'p_0001' },
+      { n: 'user_id',         t: 'UUID',   fk: 'users', ex: 'u_0001' },
+      { n: 'name',            t: 'TEXT',   ex: 'Review-Agent' },
+      { n: 'summary',         t: 'TEXT',   nu: true, ex: '基于 LLM 的代码评审 Agent' },
+      { n: 'background',      t: 'TEXT',   nu: true, ex: '团队代码评审人力不足，评审周期长……' },
+      { n: 'goal',            t: 'TEXT',   nu: true, ex: '自动化常规评审，降低人力成本' },
+      { n: 'start_date',      t: 'DATE',   nu: true, ex: '2025-03-01' },
+      { n: 'end_date',        t: 'DATE',   nu: true, ex: '2025-08-31' },
+      { n: 'role',            t: 'TEXT',   nu: true, ex: '核心开发' },
+      { n: 'tech_stack',      t: 'TEXT[]', ex: "['LangGraph','RAG','FastAPI','PostgreSQL']" },
+      { n: 'responsibilities', t: 'TEXT',  nu: true, ex: '负责 Agent 工作流编排与 RAG 检索链路' },
+      { n: 'core_work',       t: 'TEXT',   nu: true, ex: '设计多节点评审流水线，实现检索增强……' },
+      { n: 'difficulties',    t: 'TEXT',   nu: true, ex: '检索精度不足导致评审误报' },
+      { n: 'solutions',       t: 'TEXT',   nu: true, ex: '引入重排模型与查询改写' },
+      { n: 'results',         t: 'TEXT',   nu: true, ex: '评审效率提升，误报率下降 30%' },
+      { n: 'github_url',      t: 'TEXT',   nu: true, ex: 'https://github.com/zhangsan/review-agent' },
+      { n: 'demo_url',        t: 'TEXT',   nu: true, ex: 'https://review-agent.demo.zhangsan.dev' },
+      { n: 'sort_order',      t: 'INT',    ex: '0' },
+      { n: 'created_at',      t: 'TIMESTAMPTZ', ex: '2026-08-01 10:20:00+08' },
+      { n: 'updated_at',      t: 'TIMESTAMPTZ', ex: '2026-09-01 09:00:00+08' },
+    ],
+  },
+  {
+    table: 'project_skills', zh: '技能-项目关联', mod: 'm1',
+    note: '多对多关联表（PRD §6.4 技能关联项目）',
+    idx: 'PK(project_id, skill_id) · (skill_id)',
+    fields: [
+      { n: 'project_id', t: 'UUID', pk: true, fk: 'projects', ex: 'p_0001' },
+      { n: 'skill_id',   t: 'UUID', pk: true, fk: 'skills',   ex: 's_0001' },
+    ],
+  },
+  {
+    table: 'evidence', zh: '证据', mod: 'm1',
+    note: '挂在项目上，支撑 Evidence First 原则（PRD §3.1）',
+    idx: '(project_id)',
+    fields: [
+      { n: 'id',         t: 'UUID',  pk: true, ex: 'ev_0001' },
+      { n: 'project_id', t: 'UUID',  fk: 'projects', ex: 'p_0001' },
+      { n: 'type',       t: 'evidence_type', en: 'github / code / doc / experiment / screenshot / demo / paper / other', ex: 'github（GitHub）' },
+      { n: 'title',      t: 'TEXT',  ex: 'GitHub 仓库' },
+      { n: 'url',        t: 'TEXT',  nu: true, ex: 'https://github.com/zhangsan/review-agent' },
+      { n: 'note',       t: 'TEXT',  nu: true, ex: '含完整提交历史' },
+      { n: 'created_at', t: 'TIMESTAMPTZ', ex: '2026-08-02 14:00:00+08' },
+    ],
+  },
+  {
+    table: 'project_expressions', zh: '项目表达', mod: 'm3',
+    note: 'Project Agent 三种求职场景表达，按 (project, type, version) 保留历史',
+    idx: 'UNIQUE(project_id, type, version_number)',
+    fields: [
+      { n: 'id',             t: 'UUID',  pk: true, ex: 'pe_0001' },
+      { n: 'project_id',     t: 'UUID',  fk: 'projects', ex: 'p_0001' },
+      { n: 'type',           t: 'expression_type', en: 'resume_bullet / interview / star', ex: 'resume_bullet（简历版）' },
+      { n: 'version_number', t: 'INT',   ex: '2' },
+      { n: 'content',        t: 'JSONB', ex: '{"bullets":["基于 LangGraph 构建 RAG Agent Workflow，完成知识库检索、重排与生成流程的模块化编排。"]}' },
+      { n: 'status',         t: 'expression_status', en: 'draft / confirmed', ex: 'confirmed（已确认）' },
+      { n: 'created_at',     t: 'TIMESTAMPTZ', ex: '2026-08-05 16:00:00+08' },
+      { n: 'updated_at',     t: 'TIMESTAMPTZ', ex: '2026-08-05 16:00:00+08' },
+    ],
+  },
+  {
+    table: 'job_descriptions', zh: 'JD 原文', mod: 'm2',
+    note: 'MVP 仅支持粘贴 JD 文本（不做 URL 解析 / 爬虫）',
+    idx: '(user_id, created_at DESC)',
+    fields: [
+      { n: 'id',         t: 'UUID',  pk: true, ex: 'jd_0001' },
+      { n: 'user_id',    t: 'UUID',  fk: 'users', ex: 'u_0001' },
+      { n: 'title',      t: 'TEXT',  nu: true, ex: 'AI 应用工程师（阿里巴巴）' },
+      { n: 'company',    t: 'TEXT',  nu: true, ex: '阿里巴巴' },
+      { n: 'raw_text',   t: 'TEXT',  ex: '岗位职责：负责 Agent 应用开发、RAG 系统建设、API 服务开发……' },
+      { n: 'created_at', t: 'TIMESTAMPTZ', ex: '2026-09-04 19:30:00+08' },
+      { n: 'updated_at', t: 'TIMESTAMPTZ', ex: '2026-09-04 19:30:00+08' },
+    ],
+  },
+  {
+    table: 'jd_analyses', zh: 'JD 分析', mod: 'm2',
+    note: 'JD Agent 岗位画像输出（1:1 JD）',
+    idx: 'UNIQUE(jd_id)',
+    fields: [
+      { n: 'id',                     t: 'UUID',  pk: true, ex: 'jda_0001' },
+      { n: 'jd_id',                  t: 'UUID',  fk: 'job_descriptions', un: true, ex: 'jd_0001' },
+      { n: 'status',                 t: 'analysis_status', en: 'processing / completed / failed', ex: 'completed（已完成）' },
+      { n: 'title',                  t: 'TEXT',  nu: true, ex: 'AI 应用工程师' },
+      { n: 'core_skills',            t: 'JSONB', nu: true, ex: '[{"name":"Python","stars":5},{"name":"RAG","stars":5}]' },
+      { n: 'plus_skills',            t: 'JSONB', nu: true, ex: '[{"name":"Docker","stars":3}]' },
+      { n: 'responsibilities',       t: 'JSONB', nu: true, ex: '["Agent 应用开发","RAG 系统开发"]' },
+      { n: 'experience_requirement', t: 'TEXT',  nu: true, ex: '3-5 年' },
+      { n: 'education_requirement',  t: 'TEXT',  nu: true, ex: '本科及以上' },
+      { n: 'keywords',               t: 'JSONB', nu: true, ex: '["Agent","RAG","LangGraph"]' },
+      { n: 'error',                  t: 'TEXT',  nu: true, ex: '—' },
+      { n: 'created_at',             t: 'TIMESTAMPTZ', ex: '2026-09-04 19:31:00+08' },
+      { n: 'updated_at',             t: 'TIMESTAMPTZ', ex: '2026-09-04 19:31:00+08' },
+    ],
+  },
+  {
+    table: 'jd_matches', zh: '岗位匹配', mod: 'm2',
+    note: 'JD vs Career Assets 匹配结果；每次匹配留档（1:N JD）',
+    idx: '(jd_id, created_at DESC)',
+    fields: [
+      { n: 'id',                 t: 'UUID',  pk: true, ex: 'jdm_0001' },
+      { n: 'jd_id',              t: 'UUID',  fk: 'job_descriptions', ex: 'jd_0001' },
+      { n: 'overall_score',      t: 'NUMERIC(5,2)', nu: true, ex: '87.00' },
+      { n: 'skill_matches',      t: 'JSONB', nu: true, ex: '[{"name":"Python","status":"strong"},{"name":"Docker","status":"partial"},{"name":"Redis","status":"missing"}]' },
+      { n: 'matched_project_ids', t: 'JSONB', nu: true, ex: '["p_0001"]' },
+      { n: 'advantages',         t: 'JSONB', nu: true, ex: '["有完整 Agent 项目","有 RAG 实践"]' },
+      { n: 'gaps',               t: 'JSONB', nu: true, ex: '["缺少 Redis 实践","缺少生产级部署案例"]' },
+      { n: 'created_at',         t: 'TIMESTAMPTZ', ex: '2026-09-04 19:32:00+08' },
+      { n: 'updated_at',         t: 'TIMESTAMPTZ', ex: '2026-09-04 19:32:00+08' },
+    ],
+  },
+  {
+    table: 'resumes', zh: '简历', mod: 'm4',
+    note: '按目标岗位分类保存；模板选定后非空',
+    idx: 'UNIQUE(user_id, target_role)',
+    fields: [
+      { n: 'id',          t: 'UUID',  pk: true, ex: 'res_0001' },
+      { n: 'user_id',     t: 'UUID',  fk: 'users', ex: 'u_0001' },
+      { n: 'title',       t: 'TEXT',  ex: 'AI 应用工程师' },
+      { n: 'target_role', t: 'TEXT',  ex: 'AI 应用工程师' },
+      { n: 'template',    t: 'template', nu: true, en: 'classic / modern / minimal', ex: 'modern（Modern）' },
+      { n: 'created_at',  t: 'TIMESTAMPTZ', ex: '2026-09-04 20:00:00+08' },
+      { n: 'updated_at',  t: 'TIMESTAMPTZ', ex: '2026-09-04 20:15:00+08' },
+    ],
+  },
+  {
+    table: 'resume_versions', zh: '简历版本', mod: 'm4',
+    note: '内容 8 段快照（不可变）+ Reflection 验证结果',
+    idx: 'UNIQUE(resume_id, version_number) · (jd_id)',
+    fields: [
+      { n: 'id',                t: 'UUID',  pk: true, ex: 'rv_0003' },
+      { n: 'resume_id',         t: 'UUID',  fk: 'resumes', ex: 'res_0001' },
+      { n: 'version_number',    t: 'INT',   ex: '3' },
+      { n: 'jd_id',             t: 'UUID',  fk: 'job_descriptions', nu: true, ex: 'jd_0001（Master 版为空）' },
+      { n: 'content',           t: 'JSONB', ex: '{"schema_version":1,"basic_info":{…},"education":[…],"projects":[{"name":"Review-Agent","bullets":[…]}],"skills":[…]}' },
+      { n: 'reflection_status', t: 'reflection_status', en: 'pending / passed / issues', ex: 'passed（通过）' },
+      { n: 'reflection_result', t: 'JSONB', nu: true, ex: '{"match_score":78,"fabrication":{"passed":true}}' },
+      { n: 'created_at',        t: 'TIMESTAMPTZ', ex: '2026-09-04 20:15:00+08' },
+    ],
+  },
+  {
+    table: 'hr_messages', zh: 'HR 开场白', mod: 'm6',
+    note: '生成后可编辑保存；场景 × 模式组合',
+    idx: '(user_id, jd_id)',
+    fields: [
+      { n: 'id',                t: 'UUID',  pk: true, ex: 'hrm_0001' },
+      { n: 'user_id',           t: 'UUID',  fk: 'users', ex: 'u_0001' },
+      { n: 'jd_id',             t: 'UUID',  fk: 'job_descriptions', nu: true, ex: 'jd_0001' },
+      { n: 'resume_version_id', t: 'UUID',  fk: 'resume_versions', nu: true, ex: 'rv_0003' },
+      { n: 'scene',             t: 'hr_scene', en: 'boss_zhipin / wechat / email / linkedin', ex: 'boss_zhipin（Boss直聘）' },
+      { n: 'mode',              t: 'hr_mode', en: 'short / standard / technical', ex: 'standard（标准版）' },
+      { n: 'content',           t: 'TEXT',  ex: '你好，我是张三，有 3 年 AI 应用开发经验，做过完整 RAG 与 Agent 项目，和贵司岗位方向很匹配，期待进一步沟通。' },
+      { n: 'created_at',        t: 'TIMESTAMPTZ', ex: '2026-09-04 20:20:00+08' },
+      { n: 'updated_at',        t: 'TIMESTAMPTZ', ex: '2026-09-04 20:20:00+08' },
+    ],
+  },
+  {
+    table: 'applications', zh: '投递记录', mod: 'm7',
+    note: '极简表格记录；保留 resume_version_id 为 A/B 测试留基础',
+    idx: '(user_id, status) · (user_id, applied_at DESC) · (resume_version_id)',
+    fields: [
+      { n: 'id',                t: 'UUID',  pk: true, ex: 'app_0001' },
+      { n: 'user_id',           t: 'UUID',  fk: 'users', ex: 'u_0001' },
+      { n: 'company',           t: 'TEXT',  ex: '阿里巴巴' },
+      { n: 'position',          t: 'TEXT',  ex: 'AI 应用工程师' },
+      { n: 'status',            t: 'application_status', en: 'to_apply / applied / replied / interview / offer / rejected / no_response', ex: 'replied（已回复）' },
+      { n: 'applied_at',        t: 'DATE',  nu: true, ex: '2026-09-01（待投递为空）' },
+      { n: 'resume_version_id', t: 'UUID',  fk: 'resume_versions', nu: true, ex: 'rv_0003' },
+      { n: 'note',              t: 'TEXT',  nu: true, ex: '等一面' },
+      { n: 'created_at',        t: 'TIMESTAMPTZ', ex: '2026-09-01 10:00:00+08' },
+      { n: 'updated_at',        t: 'TIMESTAMPTZ', ex: '2026-09-03 18:30:00+08' },
+    ],
+  },
+  {
+    table: 'interview_qa', zh: '面试问答', mod: 'm8',
+    note: '按公司分组展示；可关联投递记录自动带出岗位',
+    idx: '(user_id, company) · (application_id)',
+    fields: [
+      { n: 'id',             t: 'UUID',  pk: true, ex: 'qa_0001' },
+      { n: 'user_id',        t: 'UUID',  fk: 'users', ex: 'u_0001' },
+      { n: 'application_id', t: 'UUID',  fk: 'applications', nu: true, ex: 'app_0001' },
+      { n: 'company',        t: 'TEXT',  ex: '阿里巴巴' },
+      { n: 'position',       t: 'TEXT',  nu: true, ex: 'AI 应用工程师' },
+      { n: 'interview_at',   t: 'DATE',  nu: true, ex: '2026-09-10' },
+      { n: 'question',       t: 'TEXT',  ex: 'RAG 系统如何评估检索质量？' },
+      { n: 'answer',         t: 'TEXT',  nu: true, ex: '从召回率 / 精确率 / MRR 三个维度评估……' },
+      { n: 'note',           t: 'TEXT',  nu: true, ex: '回答需补充指标计算细节' },
+      { n: 'created_at',     t: 'TIMESTAMPTZ', ex: '2026-09-10 15:00:00+08' },
+      { n: 'updated_at',     t: 'TIMESTAMPTZ', ex: '2026-09-10 15:00:00+08' },
+    ],
+  },
+  {
+    table: 'agent_runs', zh: 'Agent 执行日志', mod: 'core',
+    note: '横切可观测性：一次 Agent 调用一条记录',
+    idx: '(user_id, created_at DESC) · (agent_type, created_at DESC)',
+    fields: [
+      { n: 'id',            t: 'UUID',  pk: true, ex: 'ar_0001' },
+      { n: 'user_id',       t: 'UUID',  fk: 'users', ex: 'u_0001' },
+      { n: 'agent_type',    t: 'TEXT',  ex: 'resume_agent' },
+      { n: 'prompt_name',   t: 'TEXT',  nu: true, ex: 'resume_targeted.j2' },
+      { n: 'model',         t: 'TEXT',  nu: true, ex: 'deepseek-v4-pro' },
+      { n: 'status',        t: 'agent_run_status', en: 'running / completed / failed', ex: 'completed（完成）' },
+      { n: 'input_refs',    t: 'JSONB', nu: true, ex: '{"jd_id":"jd_0001","resume_id":"res_0001"}' },
+      { n: 'output_refs',   t: 'JSONB', nu: true, ex: '{"resume_version_id":"rv_0003"}' },
+      { n: 'error',         t: 'TEXT',  nu: true, ex: '—' },
+      { n: 'latency_ms',    t: 'INT',   nu: true, ex: '8421' },
+      { n: 'input_tokens',  t: 'INT',   nu: true, ex: '5230' },
+      { n: 'output_tokens', t: 'INT',   nu: true, ex: '3120' },
+      { n: 'created_at',    t: 'TIMESTAMPTZ', ex: '2026-09-04 20:14:51+08' },
+      { n: 'finished_at',   t: 'TIMESTAMPTZ', nu: true, ex: '2026-09-04 20:15:00+08' },
+    ],
+  },
+];
+
+/* ============ 关联边（由外键字段自动推导：child → parent） ============ */
+const EDGES = [];
+ENTITIES.forEach(e => {
+  e.fields.forEach(f => {
+    if (f.fk) EDGES.push({ from: e.table, to: f.fk, nu: !!f.nu, one: !!f.un });
+  });
+});
+
+/* ============ 几何工具 ============ */
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function rectOf(e) {
+  const [x, y] = POS[e.table];
+  const rows = e.fields.filter(f => f.pk || f.fk).length;
+  return { x, y, w: NODE_W, h: HEAD_H + rows * ROW_H + PAD_B, cx: x + NODE_W / 2, cy: y + (HEAD_H + rows * ROW_H + PAD_B) / 2 };
+}
+/* p 沿方向 d 与矩形 r 边界的交点（mode: enter=进入 / exit=离开） */
+function borderPoint(p, d, r, mode) {
+  const tx1 = d.x !== 0 ? (r.x - p.x) / d.x : Infinity;
+  const tx2 = d.x !== 0 ? (r.x + r.w - p.x) / d.x : Infinity;
+  const ty1 = d.y !== 0 ? (r.y - p.y) / d.y : Infinity;
+  const ty2 = d.y !== 0 ? (r.y + r.h - p.y) / d.y : Infinity;
+  const enter = Math.max(Math.min(tx1, tx2), Math.min(ty1, ty2));
+  const exit  = Math.min(Math.max(tx1, tx2), Math.max(ty1, ty2));
+  const t = mode === 'enter' ? enter : exit;
+  return { x: p.x + d.x * t, y: p.y + d.y * t };
+}
+function rot(v, a) { const c = Math.cos(a), s = Math.sin(a); return { x: v.x * c - v.y * s, y: v.x * s + v.y * c }; }
+
+/* ============ 渲染 ER 画布 ============ */
+const svg = document.getElementById('erSvg');
+svg.setAttribute('viewBox', '0 0 1490 960');
+const edgeGroups = new Map();   // edge -> <g>
+const edgesByTable = new Map(); // table -> [edge]
+const nodeEls = new Map();      // table -> div
+
+EDGES.forEach(edge => {
+  const fromRect = rectOf(ENTITIES.find(e => e.table === edge.from));
+  const toRect   = rectOf(ENTITIES.find(e => e.table === edge.to));
+  const d = { x: toRect.cx - fromRect.cx, y: toRect.cy - fromRect.cy };
+  const len = Math.hypot(d.x, d.y) || 1;
+  const u = { x: d.x / len, y: d.y / len };
+
+  const E  = borderPoint({ x: fromRect.cx, y: fromRect.cy }, d, fromRect, 'exit');  // 子端（鸦爪或圆点）
+  const P2 = borderPoint({ x: fromRect.cx, y: fromRect.cy }, d, toRect, 'enter');   // 父端（圆点）
+
+  const g = document.createElementNS(SVG_NS, 'g');
+  g.setAttribute('class', 'edge');
+
+  const line = document.createElementNS(SVG_NS, 'path');
+  line.setAttribute('class', 'line' + (edge.nu ? ' nu' : ''));
+  line.setAttribute('d', `M ${E.x.toFixed(1)} ${E.y.toFixed(1)} L ${P2.x.toFixed(1)} ${P2.y.toFixed(1)}`);
+  g.appendChild(line);
+
+  if (edge.one) {
+    // 1:1 —— 两端圆点
+    [E, P2].forEach(pt => {
+      const c = document.createElementNS(SVG_NS, 'circle');
+      c.setAttribute('class', 'one');
+      c.setAttribute('cx', pt.x); c.setAttribute('cy', pt.y); c.setAttribute('r', 3.4);
+      g.appendChild(c);
+    });
+  } else {
+    // 1:N —— 子端鸦爪（两叉 + 中杆），父端圆点
+    const r1 = rot(u, 0.5), r2 = rot(u, -0.5);
+    const foot = document.createElementNS(SVG_NS, 'path');
+    foot.setAttribute('class', 'foot');
+    foot.setAttribute('d',
+      `M ${E.x.toFixed(1)} ${E.y.toFixed(1)} L ${(E.x + 12 * r1.x).toFixed(1)} ${(E.y + 12 * r1.y).toFixed(1)} ` +
+      `M ${E.x.toFixed(1)} ${E.y.toFixed(1)} L ${(E.x + 12 * r2.x).toFixed(1)} ${(E.y + 12 * r2.y).toFixed(1)} ` +
+      `M ${E.x.toFixed(1)} ${E.y.toFixed(1)} L ${(E.x + 7 * u.x).toFixed(1)} ${(E.y + 7 * u.y).toFixed(1)}`);
+    g.appendChild(foot);
+    const c = document.createElementNS(SVG_NS, 'circle');
+    c.setAttribute('class', 'one');
+    c.setAttribute('cx', P2.x); c.setAttribute('cy', P2.y); c.setAttribute('r', 3.4);
+    g.appendChild(c);
+  }
+
+  svg.appendChild(g);
+  edgeGroups.set(edge, g);
+  [edge.from, edge.to].forEach(t => {
+    if (!edgesByTable.has(t)) edgesByTable.set(t, []);
+    edgesByTable.get(t).push(g);
+  });
+});
+
+const canvas = document.getElementById('erCanvas');
+ENTITIES.forEach(e => {
+  const [x, y] = POS[e.table];
+  const rows = e.fields.filter(f => f.pk || f.fk).length;
+  const mod = MOD[e.mod];
+  const h = HEAD_H + rows * ROW_H + PAD_B;
+
+  const div = document.createElement('div');
+  div.className = 'node';
+  div.style.left = x + 'px';
+  div.style.top = y + 'px';
+  div.style.height = h + 'px';
+  div.style.setProperty('--nc', mod.c);
+  div.style.setProperty('--nbg', `color-mix(in srgb, ${mod.c} 9%, var(--surface))`);
+  div.tabIndex = 0;
+  div.title = `${e.zh}（${e.table}）· 点击查看全部字段`;
+  div.setAttribute('aria-label', `${e.zh} ${e.table}，点击查看全部字段`);
+
+  div.innerHTML = `
+    <div class="n-head">
+      <span class="t mono">${e.table}</span>
+      <span class="m">${mod.name}</span>
+    </div>
+    <div class="n-rows">
+      ${e.fields.filter(f => f.pk || f.fk).map(f => {
+        const badges = (f.pk ? '<span class="badge-pk">PK</span>' : '') +
+                       (f.fk ? '<span class="badge-fk">FK</span>' : '');
+        return `<div class="n-row mono"><span class="f">${f.n}</span>${badges}<span class="ref">${f.fk ? '→ ' + f.fk : ''}</span></div>`;
+      }).join('')}
+    </div>`;
+
+  // 悬停高亮关联边 + 另一端节点
+  const onEnter = () => {
+    edgesByTable.get(e.table)?.forEach(g => g.classList.add('hl'));
+    EDGES.forEach(ed => {
+      if (ed.from === e.table) nodeEls.get(ed.to)?.classList.add('hover');
+      if (ed.to === e.table) nodeEls.get(ed.from)?.classList.add('hover');
+    });
+    div.classList.add('hover');
+  };
+  const onLeave = () => {
+    edgesByTable.get(e.table)?.forEach(g => g.classList.remove('hl'));
+    EDGES.forEach(ed => {
+      if (ed.from === e.table) nodeEls.get(ed.to)?.classList.remove('hover');
+      if (ed.to === e.table) nodeEls.get(ed.from)?.classList.remove('hover');
+    });
+    div.classList.remove('hover');
+  };
+  div.addEventListener('mouseenter', onEnter);
+  div.addEventListener('mouseleave', onLeave);
+  div.addEventListener('click', () => document.getElementById('card-' + e.table)?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  div.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); div.click(); } });
+
+  canvas.appendChild(div);
+  nodeEls.set(e.table, div);
+});
+
+/* ============ 渲染实体明细卡片 ============ */
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+const grid = document.getElementById('cardGrid');
+ENTITIES.forEach(e => {
+  const mod = MOD[e.mod];
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.id = 'card-' + e.table;
+  card.style.setProperty('--nc', mod.c);
+  card.style.setProperty('--nbg', `color-mix(in srgb, ${mod.c} 7%, var(--surface))`);
+
+  const rowsHtml = e.fields.map(f => {
+    const badges = (f.pk ? '<span class="badge-pk">PK</span>' : '') + (f.fk ? '<span class="badge-fk">FK</span>' : '');
+    const con = [
+      f.pk ? 'PRIMARY KEY' : '', f.fk ? 'FK → ' + f.fk : '',
+      f.un ? 'UNIQUE' : '', f.nu ? 'NULL' : 'NOT NULL',
+      f.con || '',
+    ].filter(Boolean).join(' · ');
+    return `<tr>
+      <td class="fname mono"><span class="f">${f.n}</span> ${badges}${f.fk ? '<span class="ref">→ ' + f.fk + '</span>' : ''}</td>
+      <td class="ftype mono">${f.t}${f.en ? '<span class="en">' + f.en + '</span>' : ''}</td>
+      <td class="fex" title="示例：${esc(f.ex)}${con ? ' ｜ 约束：' + esc(con) : ''}">${esc(f.ex)}</td>
+    </tr>`;
+  }).join('');
+
+  card.innerHTML = `
+    <div class="c-head">
+      <div class="c-title">
+        <span class="t mono">${e.table}</span>
+        <span class="zh">${e.zh}</span>
+        <span class="chip">${mod.name}</span>
+      </div>
+      <div class="c-note">${e.note} · ${e.fields.length} 个字段</div>
+    </div>
+    <table><tbody>${rowsHtml}</tbody></table>
+    <div class="c-foot">索引 / 约束：<span class="mono">${e.idx}</span></div>`;
+
+  grid.appendChild(card);
+});
+</script>
+</body>
+</html>
