@@ -159,7 +159,6 @@ MVP 主线（M1–M6）全部完成 ✔ —— 设计 → 前端 → 后端 → 
 | [05-agent-design.md](design/05-agent-design.md) | Agent 架构与任务协议 |
 | [06-frontend-design.md](design/06-frontend-design.md) | 前端蓝图 |
 | [07-backend-design.md](design/07-backend-design.md) | 后端设计 |
-| [08-resume-project-experience.md](design/08-resume-project-experience.md) | 简历项目表达规范 |
 
 ## 路线图
 
